@@ -50,6 +50,7 @@ Developed By : Thirukaalathessvarar S
 Reg No: 212222230161
 ```
 
+### Import necessary libraries:
 ```
 import os
 import pandas as pd
@@ -64,7 +65,10 @@ from tensorflow.keras import utils
 from tensorflow.keras import models
 from sklearn.metrics import classification_report,confusion_matrix
 import tensorflow as tf
+```
 
+### Allow GPU Processing:
+```
 from tensorflow.compat.v1.keras.backend import set_session
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True # dynamically grow the memory used on the GPU
@@ -72,28 +76,27 @@ config.log_device_placement = True # to log device placement (on which device th
 sess = tf.compat.v1.Session(config=config)
 set_session(sess)
 %matplotlib inline
+```
 
+### Read the images:
+```
 my_data_dir = 'dataset/cell_images'
-
 os.listdir(my_data_dir)
-
 test_path = my_data_dir+'/test/'
 train_path = my_data_dir+'/train/'
-
 os.listdir(train_path)
-
 len(os.listdir(train_path+'/uninfected/'))
-
 len(os.listdir(train_path+'/parasitized/'))
-
 os.listdir(train_path+'/parasitized')[7]
-
 para_img= imread(train_path+
                  '/parasitized/'+
                  os.listdir(train_path+'/parasitized')[7])
-
 plt.imshow(para_img)
+```
 
+### Check Image Dimensions:
+```
+# Checking the image dimensions
 dim1 = []
 dim2 = []
 for image_filename in os.listdir(test_path+'/uninfected'):
@@ -101,11 +104,12 @@ for image_filename in os.listdir(test_path+'/uninfected'):
     d1,d2,colors = img.shape
     dim1.append(d1)
     dim2.append(d2)
-
 sns.jointplot(x=dim1,y=dim2)
-
 image_shape = (130,130,3)
+```
 
+### Image Generator:
+```
 image_gen = ImageDataGenerator(rotation_range=20, # rotate the image 20 degrees
                                width_shift_range=0.10, # Shift the pic width by a max of 5%
                                height_shift_range=0.10, # Shift the pic height by a max of 5%
@@ -119,7 +123,10 @@ image_gen = ImageDataGenerator(rotation_range=20, # rotate the image 20 degrees
 image_gen.flow_from_directory(train_path)
 
 image_gen.flow_from_directory(test_path)
+```
 
+### Generate the model & compile:
+```
 model = models.Sequential()
 model.add(layers.Input(shape=(130,130,3))) 
 model.add(layers.Conv2D(filters=32,kernel_size=(3,3),padding="same",activation='relu'))
@@ -137,48 +144,47 @@ model.compile(optimizer='Adam',
 model.summary()
 
 batch_size = 16
-
+```
+### Fit the model
+```
 train_image_gen = image_gen.flow_from_directory(train_path,
                                                target_size=image_shape[:2],
                                                 color_mode='rgb',
                                                batch_size=batch_size,
                                                class_mode='binary')
-
 train_image_gen.batch_size
-
 len(train_image_gen.classes)
-
 train_image_gen.total_batches_seen
-
 test_image_gen = image_gen.flow_from_directory(test_path,
                                                target_size=image_shape[:2],
                                                color_mode='rgb',
                                                batch_size=batch_size,
                                                class_mode='binary',shuffle=False)
-
 train_image_gen.class_indices
-
 results = model.fit(train_image_gen,epochs=2,
 validation_data=test_image_gen )
+model.save('cell_model.h5')
+```
 
+### Plot graphs:
+```
 losses = pd.DataFrame(model.history.history)
-
 losses[['loss','val_loss']].plot()
-
 model.metrics_names
+```
 
+### Metrics Evaluation:
+```
 model.evaluate(test_image_gen)
-
 pred_probabilities = model.predict(test_image_gen)
-
 test_image_gen.classes
-
 predictions = pred_probabilities > 0.5
-
 print(classification_report(test_image_gen.classes,predictions))
-
 confusion_matrix(test_image_gen.classes,predictions)
+```
 
+### Check for new image:
+```
 plt.title("Model prediction: "+("Parasitized" if pred  else "Uninfected")+"\nActual Value: "+str(dir_))
 plt.axis("off")
 plt.imshow(img)
